@@ -1,10 +1,16 @@
 <template>
-  <!-- TEMP: show crash instead of blank white -->
-  <div v-if="fatalError" class="p-3 m-3 rounded border border-red-300 bg-red-50 text-red-800 text-sm">
-    <div class="font-semibold mb-1">Something crashed on this page.</div>
+  <!-- Crash box instead of pure white if something explodes -->
+  <div
+    v-if="fatalError"
+    class="m-3 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800"
+  >
+    <div class="mb-1 font-semibold">
+      Something crashed on this page.
+    </div>
     <pre class="whitespace-pre-wrap text-xs">{{ fatalError }}</pre>
   </div>
 
+  <!-- Header (breadcrumbs + small Create) -->
   <LayoutHeader>
     <template #left-header>
       <ViewBreadcrumbs v-model="viewControls" routeName="Leads" />
@@ -21,20 +27,45 @@
     </template>
   </LayoutHeader>
 
-  <!-- Quick Filters Bar -->
-  <QuickFiltersBar
-    v-model="ui"
-    :status-list="statusList"
-    :project-list="projectList"
-    :owner-list="ownerList"
-    status-field="status"
-    :project-field="PROJECT_FIELD"
-    owner-field="lead_owner"
-    :last-contact-field="LAST_CONTACT_FIELD.fieldname"
-    @filters-change="applyFilters"
-    @like-change="applyLike"
-    @open-all="() => { showFilters = true }"
-  />
+  <!-- TOP STRIP: filters/search + Add New Lead -->
+  <div class="bg-gray-50 px-6 pt-4 pb-3">
+    <div class="mb-3 flex items-center justify-between gap-4">
+      <!-- left: filters / search -->
+      <div class="flex-1">
+        <QuickFiltersBar
+          v-model="ui"
+          :status-list="statusList"
+          :project-list="projectList"
+          :owner-list="ownerList"
+          status-field="status"
+          :project-field="PROJECT_FIELD"
+          owner-field="lead_owner"
+          :last-contact-field="LAST_CONTACT_FIELD.fieldname"
+          @filters-change="applyFilters"
+          @like-change="applyLike"
+          @clear-all="onClearAll"
+          @open-all="() => { showFilters = true }"
+          @refresh="onQuickRefresh"
+          @arrange="onQuickArrange"
+          @created-on="onQuickCreatedOn"
+          @columns="onQuickColumns"
+        />
+      </div>
+      
+      <!-- right: Add New Lead button -->
+      <div>
+        <button
+          @click="showLeadModal = true"
+          class="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          <span>Add New Lead</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Drawer (All Filters) -->
   <AllFiltersDrawer
@@ -51,7 +82,7 @@
     @clear="clearDrawer"
   />
 
-  <!-- ViewControls manages list/group_by/kanban data loading -->
+  <!-- Data loader -->
   <ViewControls
     ref="viewControls"
     v-model="leads"
@@ -64,13 +95,13 @@
 
   <!-- Kanban View -->
   <KanbanView
-    v-if="route.params.viewType == 'kanban'"
+    v-if="leads.data && leads.data.view_type === 'kanban'"
     v-model="leads"
     :options="{
       getRoute: (row) => ({
         name: 'Lead',
         params: { leadId: row.name },
-        query: { view: route.query.view, viewType: route.params.viewType },
+        query: {},
       }),
       onNewClick: (column) => onNewClick(column),
     }"
@@ -148,7 +179,10 @@
     </template>
 
     <template #fields="{ fieldName, itemName }">
-      <div v-if="getRow(itemName, fieldName).label" class="truncate flex items-center gap-2">
+      <div
+        v-if="getRow(itemName, fieldName).label"
+        class="truncate flex items-center gap-2"
+      >
         <div v-if="fieldName === 'status'">
           <IndicatorIcon :class="getRow(itemName, fieldName).color" />
         </div>
@@ -230,7 +264,7 @@
           <span v-if="getRow(itemName, '_note_count').label">
             {{ getRow(itemName, '_note_count').label }}
           </span>
-            <span class="text-3xl leading-[0]"> · </span>
+          <span class="text-3xl leading-[0]"> · </span>
 
           <TaskIcon class="h-4 w-4" />
           <span v-if="getRow(itemName, '_task_count').label">
@@ -284,16 +318,27 @@
     <div class="flex flex-col items-center gap-3 text-xl font-medium text-ink-gray-4">
       <LeadsIcon class="h-10 w-10" />
       <span>{{ __('No {0} Found', [__('Leads')]) }}</span>
-      <Button :label="__('Create')" @click="showLeadModal = true">
-        <template #prefix><FeatherIcon name="plus" class="h-4" /></template>
-      </Button>
+      <!-- Add New Lead button removed -->
     </div>
   </div>
 
+
   <!-- Modals -->
   <LeadModal v-if="showLeadModal" v-model="showLeadModal" :defaults="defaults" />
-  <NoteModal v-if="showNoteModal" v-model="showNoteModal" :note="note" doctype="CRM Lead" :doc="docname" />
-  <TaskModal v-if="showTaskModal" v-model="showTaskModal" :task="task" doctype="CRM Lead" :doc="docname" />
+  <NoteModal
+    v-if="showNoteModal"
+    v-model="showNoteModal"
+    :note="note"
+    doctype="CRM Lead"
+    :doc="docname"
+  />
+  <TaskModal
+    v-if="showTaskModal"
+    v-model="showTaskModal"
+    :task="task"
+    doctype="CRM Lead"
+    :doc="docname"
+  />
 </template>
 
 <script setup>
@@ -369,6 +414,12 @@ const SOURCE_FIELD = computed(() => {
   return 'lead_source'
 })
 
+const DEFAULT_FILTERS = [
+  { fieldname: 'converted', operator: '=', value: 'no' },
+  // add others if needed
+  // { fieldname: 'status', operator: '!=', value: 'Junk' },
+]
+
 // --- safe frappe.call wrapper ------------------------------------------------
 async function safeFrappeCall(opts = {}) {
   try {
@@ -379,8 +430,8 @@ async function safeFrappeCall(opts = {}) {
     const args = opts.args || {}
     const url = `/api/method/${method}`
     const headers = { 'Content-Type': 'application/json' }
-    const token = (window?.frappe && window.frappe.csrf_token) ? window.frappe.csrf_token : ''
-    if (token) headers['X-Frappe-CSRF-Token'] = token
+    const token = getCsrfToken();
+    if (token) headers["X-Frappe-CSRF-Token"] = token;
 
     const res = await fetch(url, {
       method: 'POST',
@@ -403,6 +454,94 @@ async function ensureSession() {
       await window.frappe.call({ method: 'frappe.client.get_logged_user' })
     } catch {}
   }
+}
+
+
+// --- QuickFiltersBar extra handlers ---
+function onQuickRefresh() {
+  // Preferred public API
+  try {
+    viewControls.value?.reload?.()
+    // also try leadsListView to be safe
+    leadsListView.value?.reload?.()
+  } catch (e) {
+    console.warn('[Leads] quick refresh fallback', e)
+    // Worst-case: force reload page data
+    try { window.location.reload() } catch {}
+  }
+}
+
+function onQuickArrange() {
+  // Open a small sort chooser — simple default toggles sort order on `modified` if available.
+  try {
+    const vc = viewControls.value
+    if (!vc) return
+    // try nice API methods first
+    if (typeof vc.toggleSort === 'function') {
+      vc.toggleSort()
+      vc.reload?.()
+      return
+    }
+    // fallback: toggle order_by param if present
+    const params = vc.params || {}
+    const current = params.order_by || ''
+    // toggle between "creation asc" and "creation desc" as an example
+    const asc = current.includes('creation asc')
+    params.order_by = asc ? 'creation desc' : 'creation asc'
+    vc.params = params
+    vc.reload?.()
+  } catch (e) {
+    console.warn('[Leads] onQuickArrange fallback error', e)
+  }
+}
+
+function onQuickCreatedOn() {
+  // Toggle sort specifically by creation (mimics original "Created On" button behaviour)
+  try {
+    const vc = viewControls.value
+    if (!vc) return
+    // Try public methods first
+    if (typeof vc.setOrderBy === 'function') {
+      // try to detect current and flip
+      const current = vc.params?.order_by || ''
+      const asc = /creation\s+asc/i.test(current)
+      vc.setOrderBy(`creation ${asc ? 'desc' : 'asc'}`)
+      vc.reload?.()
+      return
+    }
+    // fallback: mutate params.order_by and reload
+    const params = vc.params || {}
+    const current = params.order_by || ''
+    const asc = /creation\s+asc/i.test(current)
+    params.order_by = asc ? 'creation desc' : 'creation asc'
+    vc.params = params
+    vc.reload?.()
+  } catch (e) {
+    console.warn('[Leads] onQuickCreatedOn fallback error', e)
+  }
+}
+
+function onQuickColumns() {
+  // 1) Try known Frappe selector
+  let btn =
+    document.querySelector('.list-view-header .btn-open-column-picker') ||
+    document.querySelector('[data-action="edit-columns"]');
+
+  if (btn) {
+    btn.click();
+    return;
+  }
+
+  // 2) Try scanning all buttons for the word "columns"
+  const fallback = [...document.querySelectorAll('button, a')]
+    .find(el => /column/i.test(el.textContent || ''));
+
+  if (fallback) {
+    fallback.click();
+    return;
+  }
+
+  console.warn("Columns button not found in DOM");
 }
 
 function firstKey(obj, keys, fallback = null) {
@@ -805,37 +944,66 @@ function sanitizeFilters(arr = []) {
   return out
 }
 
+import { useRouter } from 'vue-router'
+const router = useRouter()
+
+function onClearAll() {
+  const vc = viewControls.value
+  if (!vc) return
+
+  // 🔑 CLEAR ROUTE QUERY FIRST
+  router.replace({ query: {} })
+
+  // reset UI
+  Object.assign(ui, {
+    status: '',
+    project: '',
+    owner: '',
+    last_contacted_from: '',
+    last_contacted_to: '',
+    location: '',
+    space_min: '',
+    space_max: '',
+    budget_min: '',
+    budget_max: '',
+    lead_source: '',
+    lead_origin: '',
+    lead_type: '',
+  })
+
+  loadMore.value = 1
+  updatedPageCount.value = 20
+
+  vc.clearFilters?.()
+  vc.clearLikeFilters?.()
+
+  if (vc.params) delete vc.params.order_by
+
+  vc.reload?.()
+}
+
 /* ----------- FIXED: never dedupe away >= / <= ----------- */
 function applyFilters(filters = []) {
   const vc = viewControls.value
   if (!vc) return
 
-  const DOC = 'CRM Lead'
-  const tuples = []
-
-  for (const f of (filters || [])) {
-    if (!f?.fieldname || f.value === '' || f.value === null || f.value === undefined) continue
-    tuples.push([DOC, f.fieldname, String(f.operator || '=').toLowerCase(), f.value])
-  }
-
-  // pagination reset
   loadMore.value = 1
   updatedPageCount.value = 20
 
-  try {
-    if (typeof vc.clearFilters === 'function') vc.clearFilters()
-  } catch (e) {
-    console.warn('[Leads] clearFilters failed (non-fatal):', e)
+  // ALWAYS clear first
+  vc.clearFilters?.()
+
+  // If no filters → just reload clean list
+  if (!filters.length) {
+    vc.reload?.()
+    return
   }
 
-  try {
-    if (typeof vc.applyFilter === 'function') {
-      for (const t of tuples) vc.applyFilter({ filters: [t], replace: false })
-    } else if (typeof vc.setFilters === 'function') {
-      vc.setFilters(tuples)
-    }
-  } catch (e) {
-    console.error('[Leads] apply/set filters error:', e)
+  for (const f of filters) {
+    vc.applyFilter({
+      filters: [['CRM Lead', f.fieldname, f.operator, f.value]],
+      replace: false
+    })
   }
 
   vc.reload?.()
@@ -883,15 +1051,6 @@ function applyQueryFilters(query = {}) {
     vc?.reload?.()
   }
 }
-
-// run on initial load and whenever query changes
-watch(
-  () => route.query,
-  (q) => {
-    applyQueryFilters(q || {})
-  },
-  { immediate: true }
-)
 
 function applyLike(list) {
   scheduleApply(() => {
@@ -1115,7 +1274,7 @@ const scheduleDelayedMapRefresh = useDebounceFn(async () => {
       const chunk = unique.slice(i, i + MAX_DELAYED_BATCH)
       const res = await safeFrappeCall({
         method: 'crm.crm.api.reminders.get_delayed_map',
-        args: { lead_names: chunk },
+        args: { lead_names: chunk.join(',') }
       })
       Object.assign(freshMap, res?.message || {})
     }
@@ -1172,6 +1331,14 @@ function getGroupedByRows(listRows, groupByField, columns) {
     groupedRows.push(groupDetail)
   })
   return groupedRows || listRows
+}
+
+function getCsrfToken() {
+  return document.cookie
+    .split(";")
+    .map(x => x.trim())
+    .find(x => x.startsWith("csrf_token="))
+    ?.split("=")[1];
 }
 
 function getKanbanRows(data, columns) {
@@ -1334,4 +1501,166 @@ function showTask(name) {
   docname.value = name
   showTaskModal.value = true
 }
+
+// Apply route query filters on mount if present
+onMounted(() => {
+  if (route.query && Object.keys(route.query).length > 0) {
+    applyQueryFilters(route.query)
+  }
+})
+
+// Watch for route query changes
+watch(
+  () => route.query,
+  (newQuery) => {
+    if (newQuery && Object.keys(newQuery).length > 0) {
+      applyQueryFilters(newQuery)
+    }
+  }
+)
+
+const fatalError = ref('')
 </script>
+
+<style scoped>
+/* Status Badge Styling - Matching Design Mockup */
+:deep(.badge) {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* New Status - Navy/Dark Blue */
+:deep(.badge[data-status="New"]),
+:deep(.bg-gray-600),
+:deep(.bg-gray-700),
+:deep(.bg-slate-600),
+:deep(.bg-slate-700) {
+  background-color: #1E3A5F !important;
+  color: white !important;
+}
+
+/* Hot Status - Teal/Cyan */
+:deep(.badge[data-status="Hot"]),
+:deep(.bg-teal-500),
+:deep(.bg-cyan-500) {
+  background-color: #14B8A6 !important;
+  color: white !important;
+}
+
+/* Table Row Styling */
+:deep(.list-row) {
+  border-bottom: 1px solid #e5e7eb;
+  transition: background-color 0.15s ease;
+}
+
+:deep(.list-row:hover) {
+  background-color: #f9fafb;
+}
+
+/* Add New Activity Link Styling */
+:deep(.add-activity-link) {
+  color: #3b82f6;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+:deep(.add-activity-link:hover) {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+/* Phone Number Styling */
+:deep(.phone-number) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #374151;
+}
+
+/* Table Cell Padding */
+:deep(.list-row-cell) {
+  padding: 12px 16px;
+}
+
+/* Checkbox Styling */
+:deep(input[type="checkbox"]) {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  cursor: pointer;
+}
+
+:deep(input[type="checkbox"]:checked) {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+/* Filter Chip Styling */
+:deep(.filter-chip) {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background-color: white;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+:deep(.filter-chip:hover) {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+:deep(.filter-chip.active) {
+  background-color: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+/* Ensure proper text alignment */
+:deep(.text-right) {
+  text-align: right;
+}
+
+:deep(.text-center) {
+  text-align: center;
+}
+
+/* Status dropdown styling to match badges */
+:deep(.status-dropdown .dropdown-item[data-status="New"]) {
+  background-color: #1E3A5F;
+  color: white;
+}
+
+:deep(.status-dropdown .dropdown-item[data-status="Hot"]) {
+  background-color: #14B8A6;
+  color: white;
+}
+
+/* Improve spacing in table */
+:deep(.list-rows) {
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Arabic text support */
+:deep([dir="rtl"]) {
+  text-align: right;
+}
+
+/* Feedback column styling */
+:deep(.feedback-cell) {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+</style>

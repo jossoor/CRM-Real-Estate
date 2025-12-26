@@ -1,5 +1,8 @@
 <template>
-  <div class="w-full border-b bg-[var(--filter-bg,#fff)] dark:bg-gray-900">
+  <div
+    class="w-full border-b bg-[var(--filter-bg,#fff)] dark:bg-gray-900"
+    data-quickfilters="1"
+  >
     <div class="flex flex-wrap items-start gap-3 px-4 py-3 sm:flex-nowrap sm:items-center sm:gap-2 max-w-full">
       <!-- LEFT: search + All Filters + Clear -->
       <div class="flex flex-wrap items-center gap-2 max-w-full sm:flex-nowrap sm:items-center">
@@ -213,6 +216,50 @@
             </button>
           </template>
         </Dropdown>
+        <!-- Refresh -->
+        <button
+          class="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-300 bg-white px-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 active:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+          type="button"
+          @click="$emit('refresh')"
+          title="Refresh"
+        >
+          <!-- inline SVG you provided (or use FeatherIcon 'refresh') -->
+          <svg width="16" height="16" fill="none" viewBox="0 0 16 16" class="h-4"><g class="es-line-reload" clip-path="url(#a)"><path fill="currentColor" fill-rule="evenodd" d="M9.743 2.189a6 6 0 0 0-6.558 2.596.5.5 0 0 0 .844.535 5 5 0 0 1 9.12 1.683l-1.187-.686a.5.5 0 0 0-.5.866l2.165 1.25a.5.5 0 0 0 .683-.183l1.25-2.165a.5.5 0 0 0-.866-.5l-.603 1.044a6 6 0 0 0-4.348-4.44ZM3.356 9.024l1.189.687a.5.5 0 0 0 .5-.866L2.88 7.595a.5.5 0 0 0-.683.183L.947 9.943a.5.5 0 1 0 .866.5l.603-1.044a6 6 0 0 0 10.9 1.816.5.5 0 0 0-.844-.536 5 5 0 0 1-9.116-1.655Z" class="Union" clip-rule="evenodd"></path></g><defs><clipPath id="a" class="a"><path fill="currentColor" d="M.25 0h16v16h-16z"></path></clipPath></defs></svg>
+        </button>
+
+        <!-- Arrange (sort) -->
+        <button
+          class="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-300 bg-white px-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 active:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+          type="button"
+          @click="$emit('arrange')"
+          title="Arrange / Sort"
+        >
+          <!-- your arrange SVG -->
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" class="h-4"><path d="m3 16 4 4 4-4"></path><path d="M7 20V4"></path><path d="M20 8h-5"></path><path d="M15 10V6.5a2.5 2.5 0 0 1 5 0V10"></path><path d="M15 14h5l-5 6h5"></path></svg>
+        </button>
+
+        <!-- Created On (toggle ordering / open dropdown) -->
+        <button
+          class="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-300 bg-white px-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 active:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+          type="button"
+          @click="$emit('created-on')"
+          title="Created On"
+        >
+          <span class="truncate">Created On</span>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-4"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+
+        <!-- Columns -->
+        <button
+          class="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-300 bg-white px-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 active:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+          type="button"
+          @click="openRealColumns"
+          title="Columns"
+        >
+          <!-- your columns SVG -->
+          <svg width="16" height="16" viewBox="0 0 16 16" class="h-4"><path fill-rule="evenodd" clip-rule="evenodd" d="M8.07548 1.50005C8.05087 1.49632 8.02566 1.49438 8 1.49438C7.97434 1.49438 7.94914 1.49632 7.92452 1.50005H3C1.89543 1.50005 1 2.39548 1 3.50005V12.5C1 13.6046 1.89543 14.5 3 14.5H7.92511C7.94954 14.5037 7.97455 14.5056 8 14.5056C8.02545 14.5056 8.05046 14.5037 8.07489 14.5H13C14.1046 14.5 15 13.6046 15 12.5V3.50005C15 2.39548 14.1046 1.50005 13 1.50005H8.07548ZM7.5 2.50005H3C2.44772 2.50005 2 2.94776 2 3.50005V12.5C2 13.0523 2.44772 13.5 3 13.5H7.5L7.5 2.50005ZM8.5 13.5L8.5 2.50005H13C13.5523 2.50005 14 2.94776 14 3.50005V12.5C14 13.0523 13.5523 13.5 13 13.5H8.5Z" fill="currentColor"></path></svg>
+          <span class="truncate">Columns</span>
+        </button>
       </div>
     </div>
   </div>
@@ -243,7 +290,7 @@ const props = defineProps({
   ownerField:   { type: String, default: 'lead_owner' },
   lastContactField: { type: String, default: '' },
 })
-const emit = defineEmits(['filters-change', 'like-change', 'open-all'])
+const emit = defineEmits(['filters-change', 'like-change', 'open-all','clear-all'])
 
 /* 🔗 Shared model with parent (the `ui` object) */
 const ui = defineModel({ type: Object, default: () => ({}) })
@@ -384,6 +431,37 @@ const statusDotClass = computed(() => {
   return 'bg-gray-400'
 })
 
+function openRealColumns() {
+  // Find all buttons that visually look like "Columns"
+  const all = [...document.querySelectorAll("button")].filter(btn =>
+    /Columns/i.test(btn.innerText || "")
+  );
+
+  // The real one is the button NOT inside QuickFiltersBar
+  let real = all.find(btn => !btn.closest('[data-quickfilters="1"]'));
+
+  // Fallback: sometimes ERPNext wraps inside headlessui elements
+  if (!real) {
+    real = document.querySelector('div[id^="headlessui-popover-button"] button');
+  }
+
+  if (!real) {
+    console.warn("Real Columns button not found.");
+    return;
+  }
+
+  real.click();
+}
+
+async function waitForRealColumns(maxWait = 4000) {
+  const start = performance.now();
+  while (!window.__REAL_COLUMNS_BTN__) {
+    await new Promise(r => setTimeout(r, 100));
+    if (performance.now() - start > maxWait) return false;
+  }
+  return true;
+}
+
 /* payload for list API */
 function buildFiltersPayload() {
   const filters = []
@@ -455,16 +533,22 @@ function pushFilters() {
   }
 }
 
+onMounted(() => {
+  const el = document.querySelector('div.overflow-x-auto[style*="mask-image"], div[style*="mask-image: linear-gradient"]')
+  if (el) el.remove()
+})
+
 /* CLEAR ALL */
 function clearAll() {
+  // 1) Reset shared UI model (chips + inputs)
   search.value = ''
   status.value = 'all'
   projectValue.value = ''
   owner.value = 'all'
   lastFrom.value = ''
   lastTo.value = ''
-  emit('like-change', [])
-  emit('filters-change', buildFiltersPayload())
+
+  emit('clear-all') 
 }
 
 /* LIKE search — instrumented + direct-fallback to viewControls */
