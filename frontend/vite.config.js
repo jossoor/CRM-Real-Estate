@@ -29,20 +29,7 @@ function hasApp(app) {
 // List of frontend apps used in this project
 let apps = []
 
-const alias = [
-  // Default "@" for this app
-  {
-    find: '@',
-    replacement: path.resolve(__dirname, 'src'),
-  },
 
-  // App-specific aliases like @helpdesk, @hrms, etc.
-  ...apps.map((app) =>
-    hasApp(app)
-      ? { find: `@${app}`, replacement: appPath(app) }
-      : { find: `@${app}`, replacement: `virtual:${app}` },
-  ),
-]
 
 const defineFlags = Object.fromEntries(
   apps.map((app) => [
@@ -62,6 +49,30 @@ const virtualStubPlugin = {
     }
   },
 }
+const alias = [
+  // 👇 1) Per-file override FIRST (more specific)
+  {
+    find: '@/pages/Leads.vue',
+    replacement: path.resolve(
+      __dirname,
+      '../../crm_overrides/frontend/src_override/pages/Leads.vue',
+    ),
+  },
+
+  // 2) Then the generic "@" for CRM itself
+  {
+    find: '@',
+    replacement: path.resolve(__dirname, 'src'),
+  },
+
+  // 3) App-specific aliases (unchanged)
+  ...apps.map((app) =>
+    hasApp(app)
+      ? { find: `@${app}`, replacement: appPath(app) }
+      : { find: `@${app}`, replacement: `virtual:${app}` },
+  ),
+]
+
 
 console.log('Generated app aliases:', alias)
 

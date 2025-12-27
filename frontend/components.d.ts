@@ -257,6 +257,7 @@ declare module 'vue' {
     SettingsPage: typeof import('./src/components/Settings/SettingsPage.vue')['default']
     ShortcutTooltip: typeof import('./src/components/ShortcutTooltip.vue')['default']
     SidebarLink: typeof import('./src/components/SidebarLink.vue')['default']
+    SidebarMenuItem: typeof import('./src/components/Layouts/SidebarMenuItem.vue')['default']
     SidePanelLayout: typeof import('./src/components/SidePanelLayout.vue')['default']
     SidePanelLayoutEditor: typeof import('./src/components/SidePanelLayoutEditor.vue')['default']
     SidePanelModal: typeof import('./src/components/Modals/SidePanelModal.vue')['default']
