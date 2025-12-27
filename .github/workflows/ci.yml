@@ -1,14 +1,10 @@
 name: CI
 
 on:
+  pull_request:
   push:
     branches:
       - develop
-  pull_request:
-
-concurrency:
-  group: develop-crm-${{ github.event.number }}
-  cancel-in-progress: true
 
 jobs:
   tests:
@@ -42,21 +38,20 @@ jobs:
       # --------------------------------------------------
       # Checkout
       # --------------------------------------------------
-      - name: Clone repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       # --------------------------------------------------
-      # Python 3.12 (IMPORTANT)
+      # Python 3.12 (CRITICAL)
       # --------------------------------------------------
-      - name: Setup Python
+      - name: Setup Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Verify Python
         run: |
-          which python
-          python --version
+          echo "pythonLocation=$pythonLocation"
+          $pythonLocation/bin/python --version
 
       # --------------------------------------------------
       # Node
@@ -65,55 +60,30 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          check-latest: true
 
       # --------------------------------------------------
-      # Cache pip
-      # --------------------------------------------------
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml', '**/setup.py', '**/setup.cfg') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      # --------------------------------------------------
-      # Cache yarn
-      # --------------------------------------------------
-      - name: Get yarn cache directory
-        id: yarn-cache-dir-path
-        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
-
-      - name: Cache yarn
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
-
-      # --------------------------------------------------
-      # Bench setup (FORCE PYTHON 3.12)
+      # Install bench using Python 3.12
       # --------------------------------------------------
       - name: Setup Bench
         env:
-          BENCH_PYTHON: python
+          BENCH_PYTHON: ${{ env.pythonLocation }}/bin/python
         run: |
-          pip install frappe-bench
+          $pythonLocation/bin/python -m pip install --upgrade pip
+          $pythonLocation/bin/python -m pip install frappe-bench
+
           bench init ~/frappe-bench \
             --skip-redis-config-generation \
             --skip-assets \
-            --python python
+            --python $pythonLocation/bin/python
 
-          mysql --host 127.0.0.1 --port 3306 -u root -proot \
+          mysql -h 127.0.0.1 -u root -proot \
             -e "SET GLOBAL character_set_server = 'utf8mb4'"
 
-          mysql --host 127.0.0.1 --port 3306 -u root -proot \
+          mysql -h 127.0.0.1 -u root -proot \
             -e "SET GLOBAL collation_server = 'utf8mb4_unicode_ci'"
 
       # --------------------------------------------------
-      # Install CRM app
+      # Install CRM
       # --------------------------------------------------
       - name: Install CRM
         working-directory: /home/runner/frappe-bench
@@ -129,12 +99,10 @@ jobs:
           bench build
 
       # --------------------------------------------------
-      # Run tests
+      # Tests
       # --------------------------------------------------
       - name: Run Tests
         working-directory: /home/runner/frappe-bench
-        env:
-          TYPE: server
         run: |
           bench --site test_site set-config allow_tests true
           bench --site test_site run-tests --app crm
